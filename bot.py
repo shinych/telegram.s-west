@@ -151,14 +151,36 @@ async def cmd_forceweekly(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help."""
     text = (
-        "Команды бота:\n\n"
-        "/suggest <название> — предложить название группы\n"
-        "/suggestions — список неиспользованных предложений (админ)\n"
-        "/delete <номер> — удалить предложение по номеру из /suggestions (админ)\n"
-        "/results — результаты голосований за неделю\n"
-        "/forcedaily — запустить ежедневное голосование (админ)\n"
-        "/forceweekly — запустить еженедельное голосование (админ)\n"
-        "/help — эта справка"
+        "Ладно, раз уж вы спросили.\n\n"
+        "/suggest <название> — предложить название группы. "
+        "Да, ещё одно. Мы верим в вас.\n"
+        "/results — посмотреть, кто побеждает. Спойлер: не ваш вариант.\n"
+        "/about — как вообще всё это работает (если вам правда интересно)\n"
+        "/help — вы сейчас здесь. Поздравляем.\n\n"
+        "Только для админов (вы, скорее всего, не админ):\n"
+        "/suggestions — список предложений в очереди\n"
+        "/delete <номер> — удалить предложение\n"
+        "/forcedaily — запустить ежедневное голосование вручную\n"
+        "/forceweekly — запустить еженедельное голосование вручную"
+    )
+    await update.effective_message.reply_text(text)
+
+
+async def cmd_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /about and /start — explain how the bot works."""
+    text = (
+        "Итак. Вы в группе, которая не может выбрать себе название. "
+        "Бывает. Для этого я здесь.\n\n"
+        "Как это работает:\n\n"
+        "1. Вы придумываете гениальное название и пишете /suggest. "
+        "Бот делает вид, что впечатлён.\n\n"
+        "2. Каждый день бот запускает голосование из накопившихся предложений. "
+        "Демократия в действии, да.\n\n"
+        "3. В конце недели — чемпионат: топ-5 названий по итогам "
+        "ежедневных голосований сражаются в финале.\n\n"
+        "4. Через 48 часов после финала бот раскрывает авторов. "
+        "Чтобы вы знали, кого благодарить. Или винить.\n\n"
+        "Вот и всё. Пишите /help, если хотите список команд."
     )
     await update.effective_message.reply_text(text)
 
@@ -244,6 +266,8 @@ def main():
     app.add_handler(CommandHandler("forcedaily", cmd_forcedaily))
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
     app.add_handler(CommandHandler("help", cmd_help))
+    app.add_handler(CommandHandler("about", cmd_about))
+    app.add_handler(CommandHandler("start", cmd_about))
     app.add_handler(PollAnswerHandler(on_poll_answer))
     app.add_handler(PollHandler(on_poll_update))
 
