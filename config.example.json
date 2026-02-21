@@ -1,0 +1,12 @@
+{
+  "bot_token": "YOUR_BOT_TOKEN_HERE",
+  "chat_id": -1001234567890,
+  "thread_id": null,
+  "admin_user_ids": [123456789],
+  "daily_poll_hour": 21,
+  "daily_poll_minute": 0,
+  "weekly_poll_day": "sun",
+  "weekly_poll_hour": 20,
+  "weekly_poll_minute": 0,
+  "timezone": "Europe/Berlin"
+}

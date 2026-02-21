@@ -1,0 +1,7 @@
+config.json
+suggestions.json
+poll_results.json
+weekly_results.json
+*.log
+__pycache__/
+venv/
