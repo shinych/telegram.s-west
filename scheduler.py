@@ -38,7 +38,7 @@ async def run_daily_poll(bot, config: dict):
     total_chunks = len(chunks)
 
     for idx, chunk in enumerate(chunks, 1):
-        title = "Ежедневное голосование"
+        title = "🗳️ Ежедневное голосование"
         if total_chunks > 1:
             title += f" ({idx}/{total_chunks})"
 
@@ -108,7 +108,7 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
 
     msg = await bot.send_poll(
         chat_id=config["chat_id"],
-        question="Еженедельный чемпионат",
+        question="🏆 Еженедельный чемпионат",
         options=options,
         is_anonymous=False,
         allows_multiple_answers=True,
@@ -165,7 +165,7 @@ async def run_author_reveal(bot, config: dict):
         for opt in poll["options"]:
             final_counts[opt["suggestion_id"]] = opt.get("voter_count", 0)
 
-    lines = ["Результаты еженедельного чемпионата:\n"]
+    lines = ["🎉 Результаты еженедельного чемпионата:\n"]
     medals = ["🥇", "🥈", "🥉", "4.", "5."]
 
     for i, entry in enumerate(weekly["top"]):
