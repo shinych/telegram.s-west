@@ -1,7 +1,9 @@
 config.json
+token.txt
 suggestions.json
 poll_results.json
 weekly_results.json
 *.log
 __pycache__/
 venv/
+.claude/agent-memory/
