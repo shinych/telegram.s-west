@@ -112,7 +112,7 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
         options=options,
         is_anonymous=False,
         allows_multiple_answers=True,
-        open_period=172800,  # 48 hours
+        open_period=config.get("reveal_delay_hours", 6) * 3600,
         **thread_kwargs(config),
     )
 
@@ -135,8 +135,9 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
     }
     storage.add_weekly_result(weekly_result)
 
-    # Schedule author reveal 48h from now
-    reveal_time = datetime.now(tz) + timedelta(hours=48)
+    # Schedule author reveal
+    reveal_hours = config.get("reveal_delay_hours", 6)
+    reveal_time = datetime.now(tz) + timedelta(hours=reveal_hours)
     scheduler.add_job(
         run_author_reveal,
         trigger=DateTrigger(run_date=reveal_time, timezone=tz),
