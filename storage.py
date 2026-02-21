@@ -84,6 +84,24 @@ def get_suggestion_by_id(suggestion_id: str):
     return None
 
 
+def delete_suggestion(index: int) -> dict | None:
+    """Delete an unused suggestion by 1-based index. Returns the removed record, or None."""
+    unused = [s for s in load_json(SUGGESTIONS_FILE) if not s["used_in_daily"]]
+    if index < 1 or index > len(unused):
+        return None
+    target_id = unused[index - 1]["id"]
+    suggestions = load_json(SUGGESTIONS_FILE)
+    removed = None
+    new_list = []
+    for s in suggestions:
+        if s["id"] == target_id:
+            removed = s
+        else:
+            new_list.append(s)
+    save_json(SUGGESTIONS_FILE, new_list)
+    return removed
+
+
 # ---------------------------------------------------------------------------
 # Poll results
 # ---------------------------------------------------------------------------

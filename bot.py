@@ -45,41 +45,64 @@ def is_admin(user_id: int) -> bool:
 async def cmd_suggest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /suggest <name>."""
     if not context.args:
-        await update.message.reply_text(
+        await update.effective_message.reply_text(
             "Использование: /suggest <название группы>")
         return
 
     name = " ".join(context.args).strip()
     if not name:
-        await update.message.reply_text("Название не может быть пустым.")
+        await update.effective_message.reply_text("Название не может быть пустым.")
         return
 
     user = update.effective_user
     result = storage.add_suggestion(name, user.id, user.first_name)
 
     if result is None:
-        await update.message.reply_text(
+        await update.effective_message.reply_text(
             f"Название \"{name}\" уже было предложено.")
     else:
-        await update.message.reply_text(
+        await update.effective_message.reply_text(
             f"Принято: \"{name}\". Спасибо, {user.first_name}!")
 
 
 async def cmd_suggestions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /suggestions — admin only, show pending suggestions."""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("Эта команда только для админов.")
+        await update.effective_message.reply_text("Эта команда только для админов.")
         return
 
     unused = storage.get_unused_suggestions()
     if not unused:
-        await update.message.reply_text("Нет неиспользованных предложений.")
+        await update.effective_message.reply_text("Нет неиспользованных предложений.")
         return
 
     lines = ["Неиспользованные предложения:\n"]
     for i, s in enumerate(unused, 1):
         lines.append(f"{i}. {s['name']} (от {s['author_name']})")
-    await update.message.reply_text("\n".join(lines))
+    await update.effective_message.reply_text("\n".join(lines))
+
+
+async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /delete <number> — admin only, delete an unused suggestion by number."""
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("Эта команда только для админов.")
+        return
+
+    if not context.args or not context.args[0].isdigit():
+        await update.effective_message.reply_text(
+            "Использование: /delete <номер>\n"
+            "Номер из списка /suggestions.")
+        return
+
+    index = int(context.args[0])
+    removed = storage.delete_suggestion(index)
+
+    if removed is None:
+        await update.effective_message.reply_text(
+            f"Предложение с номером {index} не найдено.")
+    else:
+        await update.effective_message.reply_text(
+            f"Удалено: \"{removed['name']}\" (от {removed['author_name']}).")
 
 
 async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -90,7 +113,7 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     scores = storage.get_daily_scores_since(since_utc)
 
     if not scores:
-        await update.message.reply_text(
+        await update.effective_message.reply_text(
             "Нет результатов голосований за эту неделю.")
         return
 
@@ -104,24 +127,24 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = ["Результаты за неделю:\n"]
     for i, (name, votes) in enumerate(ranked, 1):
         lines.append(f"{i}. {name} — {votes} гол.")
-    await update.message.reply_text("\n".join(lines))
+    await update.effective_message.reply_text("\n".join(lines))
 
 
 async def cmd_forcedaily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /forcedaily — admin only, trigger daily poll now."""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("Эта команда только для админов.")
+        await update.effective_message.reply_text("Эта команда только для админов.")
         return
-    await update.message.reply_text("Запускаю ежедневное голосование...")
+    await update.effective_message.reply_text("Запускаю ежедневное голосование...")
     await run_daily_poll(context.bot, CONFIG)
 
 
 async def cmd_forceweekly(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /forceweekly — admin only, trigger weekly poll now."""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("Эта команда только для админов.")
+        await update.effective_message.reply_text("Эта команда только для админов.")
         return
-    await update.message.reply_text("Запускаю еженедельное голосование...")
+    await update.effective_message.reply_text("Запускаю еженедельное голосование...")
     await run_weekly_poll(context.bot, CONFIG, SCHEDULER)
 
 
@@ -131,12 +154,13 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Команды бота:\n\n"
         "/suggest <название> — предложить название группы\n"
         "/suggestions — список неиспользованных предложений (админ)\n"
+        "/delete <номер> — удалить предложение по номеру из /suggestions (админ)\n"
         "/results — результаты голосований за неделю\n"
         "/forcedaily — запустить ежедневное голосование (админ)\n"
         "/forceweekly — запустить еженедельное голосование (админ)\n"
         "/help — эта справка"
     )
-    await update.message.reply_text(text)
+    await update.effective_message.reply_text(text)
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +239,7 @@ def main():
     # Register handlers
     app.add_handler(CommandHandler("suggest", cmd_suggest))
     app.add_handler(CommandHandler("suggestions", cmd_suggestions))
+    app.add_handler(CommandHandler("delete", cmd_delete))
     app.add_handler(CommandHandler("results", cmd_results))
     app.add_handler(CommandHandler("forcedaily", cmd_forcedaily))
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
