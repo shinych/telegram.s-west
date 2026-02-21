@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -28,6 +29,10 @@ logger = logging.getLogger(__name__)
 # Global references set at startup
 CONFIG: dict = {}
 SCHEDULER = None
+
+# Load sarcastic thank-you lines
+with open("thanks.txt", "r", encoding="utf-8") as _f:
+    THANKS_LINES = [line.strip() for line in _f if line.strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -61,8 +66,9 @@ async def cmd_suggest(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.reply_text(
             f"🔁 Название \"{name}\" уже было предложено.")
     else:
+        thanks = random.choice(THANKS_LINES)
         await update.effective_message.reply_text(
-            f"🤘 Принято: \"{name}\". Спасибо, {user.first_name}!")
+            f"🤘 Принято: \"{name}\"\n\n{thanks}")
 
 
 async def cmd_suggestions(update: Update, context: ContextTypes.DEFAULT_TYPE):
