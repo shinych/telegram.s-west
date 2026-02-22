@@ -1,9 +1,7 @@
 config.json
 token.txt
-suggestions.json
-poll_results.json
-weekly_results.json
-subscribers.json
+data/
+!data/.gitkeep
 *.log
 __pycache__/
 venv/

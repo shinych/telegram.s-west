@@ -6,10 +6,10 @@ import uuid
 from datetime import datetime, timezone
 
 
-SUGGESTIONS_FILE = "suggestions.json"
-POLL_RESULTS_FILE = "poll_results.json"
-WEEKLY_RESULTS_FILE = "weekly_results.json"
-SUBSCRIBERS_FILE = "subscribers.json"
+SUGGESTIONS_FILE = "data/suggestions.json"
+POLL_RESULTS_FILE = "data/poll_results.json"
+WEEKLY_RESULTS_FILE = "data/weekly_results.json"
+SUBSCRIBERS_FILE = "data/subscribers.json"
 
 
 # ---------------------------------------------------------------------------
@@ -26,6 +26,7 @@ def load_json(path: str):
 
 def save_json(path: str, data):
     """Atomically write *data* as JSON to *path*."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

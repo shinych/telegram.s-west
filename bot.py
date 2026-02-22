@@ -35,7 +35,7 @@ CONFIG: dict = {}
 SCHEDULER = None
 
 # Load sarcastic thank-you lines
-with open("thanks.txt", "r", encoding="utf-8") as _f:
+with open("assets/thanks.txt", "r", encoding="utf-8") as _f:
     THANKS_LINES = [line.strip() for line in _f if line.strip()]
 
 # Load daily prompt lines

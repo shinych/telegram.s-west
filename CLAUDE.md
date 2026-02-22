@@ -23,7 +23,8 @@ Three Python modules, no frameworks beyond `python-telegram-bot` and `APSchedule
 
 - **bot.py** — Entry point. Loads config, registers Telegram command/poll handlers, starts the scheduler, runs polling. All command handlers (`/suggest`, `/results`, `/forcedaily`, etc.) live here. Tracks real-time vote deltas via `PollAnswer` updates in an in-memory dict `_previous_answers`.
 - **scheduler.py** — APScheduler cron jobs for daily and weekly polls, plus the one-shot author reveal job. `create_scheduler()` wires up the cron triggers using config timezone/times. `run_daily_poll` splits suggestions into chunks of 10 (Telegram poll limit). `run_weekly_poll` picks the top 5 by aggregated daily votes and schedules a `DateTrigger` reveal 48h later.
-- **storage.py** — All persistence via flat JSON files (`suggestions.json`, `poll_results.json`, `weekly_results.json`). Writes are atomic (write to `.tmp`, then `os.replace`). No database. Every read re-loads the full file; every write re-saves the full file.
+- **storage.py** — All persistence via flat JSON files in `data/` (`suggestions.json`, `poll_results.json`, `weekly_results.json`). Writes are atomic (write to `.tmp`, then `os.replace`). The `data/` dir is auto-created on first write. No database. Every read re-loads the full file; every write re-saves the full file.
+- **assets/** — Static text files (e.g. `thanks.txt` with sarcastic response lines).
 
 ## Key Data Flow
 
@@ -39,4 +40,4 @@ Three Python modules, no frameworks beyond `python-telegram-bot` and `APSchedule
 
 ## Files to Never Commit
 
-`config.json`, `token.txt`, and the `*.json` data files are gitignored. They contain secrets or runtime state.
+`config.json`, `token.txt`, and the `data/` directory (runtime JSON state) are gitignored. They contain secrets or runtime state.
