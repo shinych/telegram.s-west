@@ -1,4 +1,4 @@
-First-time deployment of the band-name-bot to a remote server.
+First-time deployment of the arkestrabot to a remote server.
 
 If `$ARGUMENTS` contains `--dry-run`, run in dry-run mode (preflight checks only, no changes). Otherwise run the full deployment.
 
@@ -64,7 +64,7 @@ SSH in and create a systemd unit file. Use this template, substituting the varia
 
 ```ini
 [Unit]
-Description=Band Name Voting Bot
+Description=Arkestrabot
 After=network.target
 
 [Service]

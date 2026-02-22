@@ -1,4 +1,4 @@
-"""Telegram Band Name Voting Bot — main entry point."""
+"""Arkestrabot — main entry point."""
 
 import json
 import logging
@@ -39,7 +39,7 @@ with open("assets/thanks.txt", "r", encoding="utf-8") as _f:
     THANKS_LINES = [line.strip() for line in _f if line.strip()]
 
 # Load daily prompt lines
-with open("daily_prompts.txt", "r", encoding="utf-8") as _f:
+with open("assets/daily_prompts.txt", "r", encoding="utf-8") as _f:
     PROMPT_LINES = [line.strip() for line in _f if line.strip()]
 
 # ConversationHandler states

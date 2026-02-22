@@ -1,4 +1,4 @@
-# Band Name Voting Bot
+# Arkestrabot
 
 A Telegram bot that collects band name suggestions, runs daily polls, and holds a weekly championship with author reveals.
 

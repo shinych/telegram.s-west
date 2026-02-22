@@ -1,4 +1,4 @@
-Completely remove the band-name-bot installation from the remote server.
+Completely remove the arkestrabot installation from the remote server.
 
 Read `.claude/deploy.json` to get connection details. If the file doesn't exist, tell the user to copy `.claude/deploy.json.example` to `.claude/deploy.json` and fill in their values, then stop.
 

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Step-by-step instructions for setting up and deploying the Band Name Voting Bot.
+Step-by-step instructions for setting up and deploying the Arkestrabot.
 
 ## 1. Create the bot via BotFather
 
@@ -84,21 +84,21 @@ Verify the bot responds to `/help` in your group, then stop it with Ctrl+C.
 Create the service file:
 
 ```bash
-sudo nano /etc/systemd/system/band-name-bot.service
+sudo nano /etc/systemd/system/arkestrabot.service
 ```
 
 Paste this (adjust `User` and `WorkingDirectory` to match your setup):
 
 ```ini
 [Unit]
-Description=Band Name Voting Bot
+Description=Arkestrabot
 After=network.target
 
 [Service]
 Type=simple
 User=YOUR_USER
-WorkingDirectory=/path/to/band-name-bot
-ExecStart=/path/to/band-name-bot/venv/bin/python bot.py
+WorkingDirectory=/path/to/arkestrabot
+ExecStart=/path/to/arkestrabot/venv/bin/python bot.py
 Restart=on-failure
 RestartSec=10
 
@@ -110,15 +110,15 @@ Enable and start:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable band-name-bot    # start on boot
-sudo systemctl start band-name-bot     # start now
+sudo systemctl enable arkestrabot    # start on boot
+sudo systemctl start arkestrabot     # start now
 ```
 
 Verify:
 
 ```bash
-sudo systemctl status band-name-bot    # check status
-sudo journalctl -u band-name-bot -f    # tail live logs
+sudo systemctl status arkestrabot    # check status
+sudo journalctl -u arkestrabot -f    # tail live logs
 ```
 
 ### Alternative: screen
@@ -137,11 +137,11 @@ python bot.py
 
 | Command | What it does |
 |---------|-------------|
-| `sudo systemctl stop band-name-bot` | Stop the bot |
-| `sudo systemctl restart band-name-bot` | Restart after code changes |
-| `sudo systemctl status band-name-bot` | Check if running |
-| `sudo journalctl -u band-name-bot -n 50` | Last 50 log lines |
-| `sudo journalctl -u band-name-bot --since "1 hour ago"` | Recent logs |
+| `sudo systemctl stop arkestrabot` | Stop the bot |
+| `sudo systemctl restart arkestrabot` | Restart after code changes |
+| `sudo systemctl status arkestrabot` | Check if running |
+| `sudo journalctl -u arkestrabot -n 50` | Last 50 log lines |
+| `sudo journalctl -u arkestrabot --since "1 hour ago"` | Recent logs |
 
 ## Troubleshooting
 

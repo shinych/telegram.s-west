@@ -1,4 +1,4 @@
-Update the band-name-bot on the remote server: pull latest code, update deps, restart.
+Update the arkestrabot on the remote server: pull latest code, update deps, restart.
 
 Read `.claude/deploy.json` to get connection details. If the file doesn't exist, tell the user to run `/deploy` first, then stop.
 
