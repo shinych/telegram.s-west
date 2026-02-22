@@ -50,7 +50,7 @@ async def run_daily_poll(bot, config: dict):
             options=options,
             is_anonymous=False,
             allows_multiple_answers=True,
-            open_period=86400,  # 24 hours
+            open_period=config.get("daily_poll_duration_hours", 6) * 3600,
             **thread_kwargs(config),
         )
 
@@ -112,7 +112,7 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
         options=options,
         is_anonymous=False,
         allows_multiple_answers=True,
-        open_period=config.get("reveal_delay_hours", 6) * 3600,
+        open_period=config.get("weekly_poll_duration_hours", 3) * 3600,
         **thread_kwargs(config),
     )
 
