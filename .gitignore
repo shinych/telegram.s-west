@@ -8,3 +8,4 @@ subscribers.json
 __pycache__/
 venv/
 .claude/agent-memory/
+.claude/deploy.json
