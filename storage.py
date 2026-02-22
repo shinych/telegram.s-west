@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 SUGGESTIONS_FILE = "suggestions.json"
 POLL_RESULTS_FILE = "poll_results.json"
 WEEKLY_RESULTS_FILE = "weekly_results.json"
+SUBSCRIBERS_FILE = "subscribers.json"
 
 
 # ---------------------------------------------------------------------------
@@ -18,7 +19,7 @@ WEEKLY_RESULTS_FILE = "weekly_results.json"
 def load_json(path: str):
     """Load JSON from *path*, returning [] or {} if file is missing."""
     if not os.path.exists(path):
-        return [] if path == SUGGESTIONS_FILE or path == WEEKLY_RESULTS_FILE else {}
+        return [] if path in (SUGGESTIONS_FILE, WEEKLY_RESULTS_FILE, SUBSCRIBERS_FILE) else {}
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -203,3 +204,35 @@ def mark_weekly_revealed(index: int = -1):
     if results:
         results[index]["revealed"] = True
         save_json(WEEKLY_RESULTS_FILE, results)
+
+
+# ---------------------------------------------------------------------------
+# Subscribers
+# ---------------------------------------------------------------------------
+
+def add_subscriber(user_id: int, first_name: str):
+    """Idempotently add a subscriber. Returns True if new, False if already present."""
+    subscribers = load_json(SUBSCRIBERS_FILE)
+    for s in subscribers:
+        if s["user_id"] == user_id:
+            return False
+    subscribers.append({
+        "user_id": user_id,
+        "first_name": first_name,
+        "subscribed_at": datetime.now(timezone.utc).isoformat(),
+    })
+    save_json(SUBSCRIBERS_FILE, subscribers)
+    return True
+
+
+def remove_subscriber(user_id: int):
+    """Remove a subscriber by user_id."""
+    subscribers = load_json(SUBSCRIBERS_FILE)
+    new_list = [s for s in subscribers if s["user_id"] != user_id]
+    if len(new_list) != len(subscribers):
+        save_json(SUBSCRIBERS_FILE, new_list)
+
+
+def get_all_subscribers() -> list:
+    """Return all subscribers."""
+    return load_json(SUBSCRIBERS_FILE)

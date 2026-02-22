@@ -1,12 +1,15 @@
 """APScheduler cron/date jobs for daily and weekly polls."""
 
 import logging
+import random
 from datetime import datetime, timedelta, timezone
 
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import Forbidden
 
 import storage
 
@@ -187,10 +190,47 @@ async def run_author_reveal(bot, config: dict):
 
 
 # ---------------------------------------------------------------------------
+# Daily prompt
+# ---------------------------------------------------------------------------
+
+async def run_daily_prompt(bot, config: dict, prompt_lines: list[str]):
+    """Send a creative prompt to the group and to all subscribers."""
+    prompt_text = random.choice(prompt_lines)
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "✏️ Предложить название",
+            url=f"https://t.me/{config['bot_username']}?start=suggest",
+        )
+    ]])
+
+    await bot.send_message(
+        chat_id=config["chat_id"],
+        text=prompt_text,
+        reply_markup=keyboard,
+        **thread_kwargs(config),
+    )
+
+    for sub in storage.get_all_subscribers():
+        try:
+            await bot.send_message(
+                chat_id=sub["user_id"],
+                text=prompt_text,
+                reply_markup=keyboard,
+            )
+        except Forbidden:
+            storage.remove_subscriber(sub["user_id"])
+            logger.info("Подписчик %d заблокировал бота, удалён.", sub["user_id"])
+        except Exception:
+            logger.exception("Ошибка отправки промпта подписчику %d", sub["user_id"])
+
+    logger.info("Ежедневный промпт отправлен.")
+
+
+# ---------------------------------------------------------------------------
 # Scheduler setup
 # ---------------------------------------------------------------------------
 
-def create_scheduler(bot, config: dict) -> AsyncIOScheduler:
+def create_scheduler(bot, config: dict, prompt_lines: list[str]) -> AsyncIOScheduler:
     """Create and return an AsyncIOScheduler with daily & weekly cron jobs."""
     tz = pytz.timezone(config["timezone"])
     scheduler = AsyncIOScheduler(timezone=tz)
@@ -217,6 +257,18 @@ def create_scheduler(bot, config: dict) -> AsyncIOScheduler:
         ),
         args=[bot, config, scheduler],
         id="weekly_poll",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        run_daily_prompt,
+        trigger=CronTrigger(
+            hour=config.get("daily_prompt_hour", 9),
+            minute=config.get("daily_prompt_minute", 0),
+            timezone=tz,
+        ),
+        args=[bot, config, prompt_lines],
+        id="daily_prompt",
         replace_existing=True,
     )
 

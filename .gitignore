@@ -3,6 +3,7 @@ token.txt
 suggestions.json
 poll_results.json
 weekly_results.json
+subscribers.json
 *.log
 __pycache__/
 venv/

@@ -7,19 +7,23 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 import pytz
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
+    ConversationHandler,
+    MessageHandler,
     PollAnswerHandler,
     PollHandler,
+    filters,
 )
 
 import storage
 from scheduler import (
     create_scheduler,
     run_daily_poll,
+    run_daily_prompt,
     run_weekly_poll,
     thread_kwargs,
 )
@@ -33,6 +37,13 @@ SCHEDULER = None
 # Load sarcastic thank-you lines
 with open("thanks.txt", "r", encoding="utf-8") as _f:
     THANKS_LINES = [line.strip() for line in _f if line.strip()]
+
+# Load daily prompt lines
+with open("daily_prompts.txt", "r", encoding="utf-8") as _f:
+    PROMPT_LINES = [line.strip() for line in _f if line.strip()]
+
+# ConversationHandler states
+AWAITING_BAND_NAME = 0
 
 
 # ---------------------------------------------------------------------------
@@ -50,8 +61,17 @@ def is_admin(user_id: int) -> bool:
 async def cmd_suggest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /suggest <name>."""
     if not context.args:
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "✏️ Предложить название",
+                url=f"https://t.me/{CONFIG['bot_username']}?start=suggest",
+            )
+        ]])
         await update.effective_message.reply_text(
-            "✏️ Использование: /suggest <название группы>")
+            "✏️ Нажми кнопку — напишешь название в личке боту.\n"
+            "Или: /suggest <название> прямо здесь.",
+            reply_markup=keyboard,
+        )
         return
 
     name = " ".join(context.args).strip()
@@ -154,39 +174,89 @@ async def cmd_forceweekly(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await run_weekly_poll(context.bot, CONFIG, SCHEDULER)
 
 
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /start in private chat — deep link entry for suggest flow."""
+    user = update.effective_user
+    storage.add_subscriber(user.id, user.first_name)
+
+    if context.args and context.args[0] == "suggest":
+        await update.effective_message.reply_text(
+            "✏️ Напиши название группы. Просто текстом. Без команд.")
+        return AWAITING_BAND_NAME
+
+    await cmd_about(update, context)
+    return ConversationHandler.END
+
+
+async def receive_band_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive a band name in private chat (ConversationHandler state)."""
+    name = update.message.text.strip()
+    if not name:
+        await update.effective_message.reply_text("🫥 Пустое название? Попробуй ещё раз.")
+        return AWAITING_BAND_NAME
+
+    user = update.effective_user
+    result = storage.add_suggestion(name, user.id, user.first_name)
+
+    if result is None:
+        await update.effective_message.reply_text(
+            f"🔁 \"{name}\" уже предложено. Попробуй другое.")
+        return AWAITING_BAND_NAME
+
+    thanks = random.choice(THANKS_LINES)
+    await update.effective_message.reply_text(
+        f"🤘 Принято: \"{name}\"\n\n{thanks}")
+    return ConversationHandler.END
+
+
+async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancel the conversation."""
+    await update.effective_message.reply_text("🚪 Ладно, в другой раз.")
+    return ConversationHandler.END
+
+
+async def cmd_forceprompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /forceprompt — admin only, trigger daily prompt now."""
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("🔒 Эта команда только для админов.")
+        return
+    await update.effective_message.reply_text("⚡ Отправляю промпт...")
+    await run_daily_prompt(context.bot, CONFIG, PROMPT_LINES)
+
+
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help."""
-    text = (
-        "🎸 Ладно, раз уж вы спросили. 😮‍💨\n\n"
-        "🤘 /suggest <название> — кинуть ещё одно название в кучу. "
-        "Дерзайте.\n"
-        "📊 /results — узнать кто лидирует. Спойлер: не вы. 🪦\n"
-        "📖 /about — зачем всё это. Если вам не лень читать. 🥱\n"
-        "❓ /help — вы здесь. Выхода нет. 🚪🚫\n\n"
-        "🔒 Для админов (вы не админ):\n"
-        "📋 /suggestions — очередь на казнь\n"
-        "🗑️ /delete <номер> — казнить предложение\n"
-        "⚡ /forcedaily — принудительное ежедневное голосование\n"
-        "⚡ /forceweekly — принудительный финал"
-    )
-    await update.effective_message.reply_text(text)
+    lines = [
+        "📌 Команды:\n",
+        "✏️ /suggest — предложить название (кнопка или /suggest <название>)",
+        "📊 /results — текущий рейтинг недели",
+        "ℹ️ /about — как всё устроено",
+        "❓ /help — этот список",
+    ]
+    if is_admin(update.effective_user.id):
+        lines.append(
+            "\n🔧 Админ:\n"
+            "📋 /suggestions — неиспользованные предложения\n"
+            "🗑️ /delete <номер> — удалить предложение\n"
+            "⚡ /forcedaily — запустить ежедневное голосование\n"
+            "⚡ /forceweekly — запустить еженедельный финал\n"
+            "📢 /forceprompt — отправить промпт дня"
+        )
+    await update.effective_message.reply_text("\n".join(lines))
 
 
 async def cmd_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /about and /start — explain how the bot works."""
     text = (
-        "🎤 Итак. Вы в группе, которая не может выбрать себе название. "
+        "Бот для выбора названия группы, которая не может выбрать себе название. "
         "Уже долго не может. Я тут чтобы это как-то закончилось. 🫠\n\n"
-        "Процедура: 🤷\n\n"
-        "1️⃣ Вы пишете /suggest и предлагаете название. "
-        "Любое. Бот не осуждает. Бот вообще ничего не чувствует. 🗿\n\n"
-        "2️⃣ Каждый день в 12:00 — голосование из того, что накопилось. "
-        "Стадо голосует. 🐑\n\n"
-        "3️⃣ В пятницу в 18:00 — финал недели. Топ-5 выживших "
-        "сражаются за право быть названием. Или не быть. 🏆🪦\n\n"
-        "4️⃣ Через 48ч бот раскрывает кто что предложил. "
-        "Анонимность была иллюзией. 🕵️🫵\n\n"
-        "Всё. /help если хотите кнопки. 🥱"
+        "1. Утром приходит промпт — жмёте кнопку, пишете название в личке. "
+        "Или /suggest в чате.\n"
+        "2. В 12:00 — голосование за накопившиеся варианты.\n"
+        "3. В пятницу в 18:00 — финал: топ-5 за неделю.\n"
+        "4. Повторять до победного. Или до распада группы.\n\n"
+        "⚠️ Бот груб, не учтив и плохо шутит. Это не баг.\n\n"
+        "/help — список команд."
     )
     await update.effective_message.reply_text(text)
 
@@ -264,13 +334,31 @@ def main():
     # Build application
     app = Application.builder().token(CONFIG["bot_token"]).build()
 
-    # Register handlers
+    # Register handlers — ConversationHandler first (private /start deep link)
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CommandHandler("start", cmd_start, filters=filters.ChatType.PRIVATE),
+        ],
+        states={
+            AWAITING_BAND_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_band_name),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", cmd_cancel),
+            CommandHandler("start", cmd_start),
+        ],
+        conversation_timeout=300,
+    )
+    app.add_handler(conv_handler)
+
     app.add_handler(CommandHandler("suggest", cmd_suggest))
     app.add_handler(CommandHandler("suggestions", cmd_suggestions))
     app.add_handler(CommandHandler("delete", cmd_delete))
     app.add_handler(CommandHandler("results", cmd_results))
     app.add_handler(CommandHandler("forcedaily", cmd_forcedaily))
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
+    app.add_handler(CommandHandler("forceprompt", cmd_forceprompt))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("about", cmd_about))
     app.add_handler(CommandHandler("start", cmd_about))
@@ -278,7 +366,7 @@ def main():
     app.add_handler(PollHandler(on_poll_update))
 
     # Start scheduler
-    SCHEDULER = create_scheduler(app.bot, CONFIG)
+    SCHEDULER = create_scheduler(app.bot, CONFIG, PROMPT_LINES)
     SCHEDULER.start()
     logger.info("Планировщик запущен.")
 
