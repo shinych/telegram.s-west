@@ -15,8 +15,9 @@ import storage
 
 logger = logging.getLogger(__name__)
 
-# Telegram limits polls to 10 options
+# Telegram limits polls to 10 options; reserve 1 for the joke option
 MAX_POLL_OPTIONS = 10
+JOKE_OPTION = "Всё это отвратительно. Дайте посмотреть результаты"
 
 
 def thread_kwargs(config: dict) -> dict:
@@ -36,8 +37,9 @@ async def run_daily_poll(bot, config: dict):
         logger.info("Нет новых предложений для ежедневного голосования.")
         return
 
-    chunks = [unused[i:i + MAX_POLL_OPTIONS]
-              for i in range(0, len(unused), MAX_POLL_OPTIONS)]
+    max_real = MAX_POLL_OPTIONS - 1  # leave room for joke option
+    chunks = [unused[i:i + max_real]
+              for i in range(0, len(unused), max_real)]
     total_chunks = len(chunks)
 
     for idx, chunk in enumerate(chunks, 1):
@@ -45,7 +47,7 @@ async def run_daily_poll(bot, config: dict):
         if total_chunks > 1:
             title += f" ({idx}/{total_chunks})"
 
-        options = [s["name"] for s in chunk]
+        options = [s["name"] for s in chunk] + [JOKE_OPTION]
 
         msg = await bot.send_poll(
             chat_id=config["chat_id"],
@@ -106,7 +108,7 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
     if not top:
         return
 
-    options = [entry["name"] for entry in top]
+    options = [entry["name"] for entry in top] + [JOKE_OPTION]
 
     msg = await bot.send_poll(
         chat_id=config["chat_id"],

@@ -187,6 +187,12 @@ def get_daily_scores_since(since_dt: datetime) -> dict:
     return scores
 
 
+def get_open_polls() -> dict:
+    """Return {telegram_poll_id: poll_record} for all non-closed polls."""
+    results = load_json(POLL_RESULTS_FILE)
+    return {pid: poll for pid, poll in results.items() if not poll.get("closed")}
+
+
 def get_poll(telegram_poll_id: str):
     """Return a single poll record or None."""
     return load_json(POLL_RESULTS_FILE).get(telegram_poll_id)

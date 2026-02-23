@@ -224,6 +224,25 @@ async def cmd_forceprompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await run_daily_prompt(context.bot, CONFIG, PROMPT_LINES)
 
 
+async def cmd_close_polls(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /closepolls — admin only, close all open polls."""
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("🔒 Эта команда только для админов.")
+        return
+    open_polls = storage.get_open_polls()
+    if not open_polls:
+        await update.effective_message.reply_text("🤷 Нет открытых опросов.")
+        return
+    closed = 0
+    for poll_id, poll in open_polls.items():
+        try:
+            await context.bot.stop_poll(CONFIG["chat_id"], poll["message_id"])
+            closed += 1
+        except Exception:
+            logger.exception("Не удалось закрыть опрос %s", poll_id)
+    await update.effective_message.reply_text(f"🔒 Закрыто опросов: {closed}/{len(open_polls)}")
+
+
 async def cmd_reset_votes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /resetvotes — admin only, clear all votes and reuse suggestions."""
     if not is_admin(update.effective_user.id):
@@ -252,6 +271,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚡ /forcedaily — запустить ежедневное голосование\n"
             "⚡ /forceweekly — запустить еженедельный финал\n"
             "📢 /forceprompt — отправить промпт дня\n"
+            "🔒 /closepolls — закрыть все открытые опросы\n"
             "🔄 /resetvotes — сбросить все голосования"
         )
     await update.effective_message.reply_text("\n".join(lines))
@@ -372,6 +392,7 @@ def main():
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
     app.add_handler(CommandHandler("forceprompt", cmd_forceprompt))
     app.add_handler(CommandHandler("resetvotes", cmd_reset_votes))
+    app.add_handler(CommandHandler("closepolls", cmd_close_polls))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("about", cmd_about))
     app.add_handler(CommandHandler("start", cmd_about))
