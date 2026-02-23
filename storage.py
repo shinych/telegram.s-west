@@ -73,6 +73,16 @@ def mark_suggestions_used(ids: list[str]):
     save_json(SUGGESTIONS_FILE, suggestions)
 
 
+def reset_all_votes():
+    """Clear all poll results and mark every suggestion as unused."""
+    save_json(POLL_RESULTS_FILE, {})
+    save_json(WEEKLY_RESULTS_FILE, [])
+    suggestions = load_json(SUGGESTIONS_FILE)
+    for s in suggestions:
+        s["used_in_daily"] = False
+    save_json(SUGGESTIONS_FILE, suggestions)
+
+
 def get_all_suggestions() -> list:
     """Return every suggestion ever submitted."""
     return load_json(SUGGESTIONS_FILE)

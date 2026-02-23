@@ -224,6 +224,17 @@ async def cmd_forceprompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await run_daily_prompt(context.bot, CONFIG, PROMPT_LINES)
 
 
+async def cmd_reset_votes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /resetvotes — admin only, clear all votes and reuse suggestions."""
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("🔒 Эта команда только для админов.")
+        return
+    storage.reset_all_votes()
+    _previous_answers.clear()
+    await update.effective_message.reply_text(
+        "🔄 Все голосования сброшены. Предложения снова доступны для опросов.")
+
+
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help."""
     lines = [
@@ -240,7 +251,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🗑️ /delete <номер> — удалить предложение\n"
             "⚡ /forcedaily — запустить ежедневное голосование\n"
             "⚡ /forceweekly — запустить еженедельный финал\n"
-            "📢 /forceprompt — отправить промпт дня"
+            "📢 /forceprompt — отправить промпт дня\n"
+            "🔄 /resetvotes — сбросить все голосования"
         )
     await update.effective_message.reply_text("\n".join(lines))
 
@@ -359,6 +371,7 @@ def main():
     app.add_handler(CommandHandler("forcedaily", cmd_forcedaily))
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
     app.add_handler(CommandHandler("forceprompt", cmd_forceprompt))
+    app.add_handler(CommandHandler("resetvotes", cmd_reset_votes))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("about", cmd_about))
     app.add_handler(CommandHandler("start", cmd_about))
