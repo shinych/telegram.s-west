@@ -243,6 +243,21 @@ async def cmd_close_polls(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_text(f"🔒 Закрыто опросов: {closed}/{len(open_polls)}")
 
 
+async def cmd_subscribers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /subscribers — admin only, list all subscribers."""
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("🔒 Эта команда только для админов.")
+        return
+    subs = storage.get_all_subscribers()
+    if not subs:
+        await update.effective_message.reply_text("📭 Нет подписчиков.")
+        return
+    lines = [f"👥 Подписчики ({len(subs)}):\n"]
+    for i, s in enumerate(subs, 1):
+        lines.append(f"{i}. {s['first_name']} (id: {s['user_id']})")
+    await update.effective_message.reply_text("\n".join(lines))
+
+
 async def cmd_reset_votes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /resetvotes — admin only, clear all votes and reuse suggestions."""
     if not is_admin(update.effective_user.id):
@@ -271,6 +286,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚡ /forcedaily — запустить ежедневное голосование\n"
             "⚡ /forceweekly — запустить еженедельный финал\n"
             "📢 /forceprompt — отправить промпт дня\n"
+            "👥 /subscribers — список подписчиков\n"
             "🔒 /closepolls — закрыть все открытые опросы\n"
             "🔄 /resetvotes — сбросить все голосования"
         )
@@ -391,6 +407,7 @@ def main():
     app.add_handler(CommandHandler("forcedaily", cmd_forcedaily))
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
     app.add_handler(CommandHandler("forceprompt", cmd_forceprompt))
+    app.add_handler(CommandHandler("subscribers", cmd_subscribers))
     app.add_handler(CommandHandler("resetvotes", cmd_reset_votes))
     app.add_handler(CommandHandler("closepolls", cmd_close_polls))
     app.add_handler(CommandHandler("help", cmd_help))
