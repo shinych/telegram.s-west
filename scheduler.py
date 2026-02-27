@@ -78,7 +78,7 @@ async def run_daily_poll(bot, config: dict):
 # ---------------------------------------------------------------------------
 
 async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
-    """Send weekly championship poll with top 5 names from the past week."""
+    """Send weekly championship poll with top 10 names from the past week."""
     tz = pytz.timezone(config["timezone"])
     since = datetime.now(tz) - timedelta(days=7)
     since_utc = since.astimezone(timezone.utc)
@@ -103,7 +103,7 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
             })
 
     ranked.sort(key=lambda x: (-x["votes"], x["submitted_at"]))
-    top = ranked[:5]
+    top = ranked[:10]
 
     if not top:
         return
@@ -170,7 +170,7 @@ async def run_author_reveal(bot, config: dict):
             final_counts[opt["suggestion_id"]] = opt.get("voter_count", 0)
 
     lines = ["🎉 Результаты еженедельного чемпионата:\n"]
-    medals = ["🥇", "🥈", "🥉", "4.", "5."]
+    medals = ["🥇", "🥈", "🥉", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
 
     for i, entry in enumerate(weekly["top"]):
         votes = final_counts.get(entry["suggestion_id"], entry["votes"])
