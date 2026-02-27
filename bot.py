@@ -79,6 +79,12 @@ async def cmd_suggest(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.reply_text("🫥 Название не может быть пустым.")
         return
 
+    if len(name) > 100:
+        await update.effective_message.reply_text(
+            f"🚫 Слишком длинное название ({len(name)} символов). "
+            "Telegram ограничивает варианты в опросе до 100 символов.")
+        return
+
     user = update.effective_user
     result = storage.add_suggestion(name, user.id, user.first_name)
 
@@ -193,6 +199,12 @@ async def receive_band_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.message.text.strip()
     if not name:
         await update.effective_message.reply_text("🫥 Пустое название? Попробуй ещё раз.")
+        return AWAITING_BAND_NAME
+
+    if len(name) > 100:
+        await update.effective_message.reply_text(
+            f"🚫 Слишком длинное ({len(name)} символов). "
+            "Максимум 100. Попробуй короче.")
         return AWAITING_BAND_NAME
 
     user = update.effective_user

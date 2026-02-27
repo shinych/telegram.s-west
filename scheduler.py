@@ -47,7 +47,7 @@ async def run_daily_poll(bot, config: dict):
         if total_chunks > 1:
             title += f" ({idx}/{total_chunks})"
 
-        options = [s["name"] for s in chunk] + [JOKE_OPTION]
+        options = [s["name"][:100] for s in chunk] + [JOKE_OPTION]
 
         msg = await bot.send_poll(
             chat_id=config["chat_id"],
