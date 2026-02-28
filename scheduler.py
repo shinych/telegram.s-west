@@ -53,7 +53,7 @@ async def run_daily_poll(bot, config: dict):
             chat_id=config["chat_id"],
             question=title,
             options=options,
-            is_anonymous=False,
+            is_anonymous=True,
             allows_multiple_answers=True,
             **thread_kwargs(config),
         )
@@ -114,7 +114,7 @@ async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
         chat_id=config["chat_id"],
         question="🏆 Еженедельный чемпионат",
         options=options,
-        is_anonymous=False,
+        is_anonymous=True,
         allows_multiple_answers=True,
         **thread_kwargs(config),
     )
