@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import Forbidden
+from telegram.error import BadRequest, Forbidden
 
 import storage
 
@@ -27,11 +27,37 @@ def thread_kwargs(config: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Close open polls
+# ---------------------------------------------------------------------------
+
+async def close_open_polls(bot, config: dict, poll_type: str | None = None):
+    """Close all open polls (optionally filtered by type) and capture final votes."""
+    open_polls = storage.get_open_polls()
+    for poll_id, poll in open_polls.items():
+        if poll_type and poll.get("type") != poll_type:
+            continue
+        try:
+            final = await bot.stop_poll(
+                chat_id=config["chat_id"],
+                message_id=poll["message_id"],
+            )
+            counts = [opt.voter_count for opt in final.options]
+            storage.set_poll_option_counts(poll_id, counts)
+            storage.close_poll(poll_id)
+            logger.info("Опрос %s закрыт, голоса: %s", poll_id, counts)
+        except BadRequest as e:
+            logger.warning("Не удалось закрыть опрос %s: %s", poll_id, e)
+            storage.close_poll(poll_id)
+
+
+# ---------------------------------------------------------------------------
 # Daily poll
 # ---------------------------------------------------------------------------
 
 async def run_daily_poll(bot, config: dict):
     """Send daily poll(s) with unused suggestions."""
+    await close_open_polls(bot, config, poll_type="daily")
+
     unused = storage.get_unused_suggestions()
     if not unused:
         logger.info("Нет новых предложений для ежедневного голосования.")
@@ -79,6 +105,8 @@ async def run_daily_poll(bot, config: dict):
 
 async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
     """Send weekly championship poll with top 10 names from the past week."""
+    await close_open_polls(bot, config, poll_type="daily")
+
     tz = pytz.timezone(config["timezone"])
     since = datetime.now(tz) - timedelta(days=7)
     since_utc = since.astimezone(timezone.utc)
