@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest, Forbidden
+from telegram.error import BadRequest, Forbidden, TimedOut, NetworkError
 
 import storage
 
@@ -48,6 +48,8 @@ async def close_open_polls(bot, config: dict, poll_type: str | None = None):
         except BadRequest as e:
             logger.warning("Не удалось закрыть опрос %s: %s", poll_id, e)
             storage.close_poll(poll_id)
+        except (TimedOut, NetworkError) as e:
+            logger.warning("Таймаут/сеть при закрытии опроса %s: %s", poll_id, e)
 
 
 # ---------------------------------------------------------------------------
