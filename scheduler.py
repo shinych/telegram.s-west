@@ -56,9 +56,23 @@ async def close_open_polls(bot, config: dict, poll_type: str | None = None):
 # Daily poll
 # ---------------------------------------------------------------------------
 
+async def _post_results(bot, config: dict):
+    """Post current standings to the group (lazy-imports format_results to avoid circular dep)."""
+    from bot import format_results
+
+    text = format_results(config)
+    if text:
+        await bot.send_message(
+            chat_id=config["chat_id"],
+            text=text,
+            **thread_kwargs(config),
+        )
+
+
 async def run_daily_poll(bot, config: dict):
     """Send daily poll(s) with unused suggestions."""
     await close_open_polls(bot, config, poll_type="daily")
+    await _post_results(bot, config)
 
     unused = storage.get_unused_suggestions()
     if not unused:
@@ -108,6 +122,7 @@ async def run_daily_poll(bot, config: dict):
 async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
     """Send weekly championship poll with top 10 names from the past week."""
     await close_open_polls(bot, config, poll_type="daily")
+    await _post_results(bot, config)
 
     tz = pytz.timezone(config["timezone"])
     since = datetime.now(tz) - timedelta(days=7)

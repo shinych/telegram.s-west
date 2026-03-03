@@ -137,9 +137,12 @@ async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🗑️ Удалено: \"{removed['name']}\" (от {removed['author_name']}).")
 
 
-async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /results — current week standings + past weekly championships."""
-    tz = pytz.timezone(CONFIG["timezone"])
+def format_results(config: dict) -> str | None:
+    """Build results text (current week + past championships), filtering 0-vote entries.
+
+    Returns the formatted string or None if there are no results.
+    """
+    tz = pytz.timezone(config["timezone"])
     weekly_results = storage.get_all_weekly_results()
     medals = ["🥇", "🥈", "🥉"]
 
@@ -161,14 +164,17 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
         date_to = now.strftime("%-d %b").lower()
         ranked = []
         for sid, votes in scores.items():
+            if votes <= 0:
+                continue
             suggestion = storage.get_suggestion_by_id(sid)
             if suggestion:
                 ranked.append((suggestion["name"], votes))
         ranked.sort(key=lambda x: -x[1])
-        lines = [f"📊 Текущая неделя ({date_from} — {date_to}):\n"]
-        for i, (name, votes) in enumerate(ranked, 1):
-            lines.append(f"{i}. {name} — {votes} гол.")
-        sections.append("\n".join(lines))
+        if ranked:
+            lines = [f"📊 Текущая неделя ({date_from} — {date_to}):\n"]
+            for i, (name, votes) in enumerate(ranked, 1):
+                lines.append(f"{i}. {name} — {votes} гол.")
+            sections.append("\n".join(lines))
 
     # --- Past weekly championships ---
     for weekly in weekly_results:
@@ -182,12 +188,18 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
         week_start = (created - timedelta(days=7)).strftime("%-d %b").lower()
         week_end = created.strftime("%-d %b").lower()
 
-        lines = [f"🏆 Неделя {week_start} — {week_end}:\n"]
         ranked_top = sorted(
             weekly["top"],
             key=lambda e: final_counts.get(e["suggestion_id"], e["votes"]),
             reverse=True,
         )
+        ranked_top = [
+            e for e in ranked_top
+            if final_counts.get(e["suggestion_id"], e["votes"]) > 0
+        ]
+        if not ranked_top:
+            continue
+        lines = [f"🏆 Неделя {week_start} — {week_end}:\n"]
         for i, entry in enumerate(ranked_top):
             votes = final_counts.get(entry["suggestion_id"], entry["votes"])
             medal = medals[i] if i < len(medals) else f"{i+1}."
@@ -198,11 +210,18 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sections.append("\n".join(lines))
 
     if not sections:
+        return None
+    return "\n\n".join(sections)
+
+
+async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /results — current week standings + past weekly championships."""
+    text = format_results(CONFIG)
+    if not text:
         await update.effective_message.reply_text(
             "😶 Нет результатов голосований за эту неделю.")
         return
-
-    await update.effective_message.reply_text("\n\n".join(sections))
+    await update.effective_message.reply_text(text)
 
 
 async def cmd_forcedaily(update: Update, context: ContextTypes.DEFAULT_TYPE):
