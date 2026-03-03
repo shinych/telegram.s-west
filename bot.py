@@ -138,28 +138,71 @@ async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /results — show current week's aggregated leaderboard."""
+    """Handle /results — current week standings + past weekly championships."""
     tz = pytz.timezone(CONFIG["timezone"])
-    since = datetime.now(tz) - timedelta(days=7)
-    since_utc = since.astimezone(timezone.utc)
-    scores = storage.get_daily_scores_since(since_utc)
+    weekly_results = storage.get_all_weekly_results()
+    medals = ["🥇", "🥈", "🥉"]
 
-    if not scores:
+    # --- Current week section ---
+    if weekly_results:
+        latest_created = datetime.fromisoformat(weekly_results[0]["created_at"])
+        since_utc = latest_created
+    else:
+        since = datetime.now(tz) - timedelta(days=7)
+        since_utc = since.astimezone(timezone.utc)
+
+    scores = storage.get_daily_scores_since(since_utc)
+    sections = []
+
+    if scores:
+        now = datetime.now(tz)
+        since_local = since_utc.astimezone(tz) if weekly_results else (now - timedelta(days=7))
+        date_from = since_local.strftime("%-d %b").lower()
+        date_to = now.strftime("%-d %b").lower()
+        ranked = []
+        for sid, votes in scores.items():
+            suggestion = storage.get_suggestion_by_id(sid)
+            if suggestion:
+                ranked.append((suggestion["name"], votes))
+        ranked.sort(key=lambda x: -x[1])
+        lines = [f"📊 Текущая неделя ({date_from} — {date_to}):\n"]
+        for i, (name, votes) in enumerate(ranked, 1):
+            lines.append(f"{i}. {name} — {votes} гол.")
+        sections.append("\n".join(lines))
+
+    # --- Past weekly championships ---
+    for weekly in weekly_results:
+        poll = storage.get_poll(weekly["poll_id"])
+        final_counts = {}
+        if poll:
+            for opt in poll["options"]:
+                final_counts[opt["suggestion_id"]] = opt.get("voter_count", 0)
+
+        created = datetime.fromisoformat(weekly["created_at"]).astimezone(tz)
+        week_start = (created - timedelta(days=7)).strftime("%-d %b").lower()
+        week_end = created.strftime("%-d %b").lower()
+
+        lines = [f"🏆 Неделя {week_start} — {week_end}:\n"]
+        ranked_top = sorted(
+            weekly["top"],
+            key=lambda e: final_counts.get(e["suggestion_id"], e["votes"]),
+            reverse=True,
+        )
+        for i, entry in enumerate(ranked_top):
+            votes = final_counts.get(entry["suggestion_id"], entry["votes"])
+            medal = medals[i] if i < len(medals) else f"{i+1}."
+            name = entry["name"]
+            if weekly.get("revealed"):
+                name += f" (автор: {entry['author_name']})"
+            lines.append(f"{medal} {name} — {votes} гол.")
+        sections.append("\n".join(lines))
+
+    if not sections:
         await update.effective_message.reply_text(
             "😶 Нет результатов голосований за эту неделю.")
         return
 
-    ranked = []
-    for sid, votes in scores.items():
-        suggestion = storage.get_suggestion_by_id(sid)
-        if suggestion:
-            ranked.append((suggestion["name"], votes))
-    ranked.sort(key=lambda x: -x[1])
-
-    lines = ["📊 Результаты за неделю:\n"]
-    for i, (name, votes) in enumerate(ranked, 1):
-        lines.append(f"{i}. {name} — {votes} гол.")
-    await update.effective_message.reply_text("\n".join(lines))
+    await update.effective_message.reply_text("\n\n".join(sections))
 
 
 async def cmd_forcedaily(update: Update, context: ContextTypes.DEFAULT_TYPE):

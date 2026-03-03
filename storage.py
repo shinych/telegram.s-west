@@ -215,6 +215,13 @@ def get_latest_weekly():
     return results[-1] if results else None
 
 
+def get_all_weekly_results() -> list:
+    """Return all weekly results, newest first."""
+    results = load_json(WEEKLY_RESULTS_FILE)
+    results.reverse()
+    return results
+
+
 def mark_weekly_revealed(index: int = -1):
     """Set revealed=True on a weekly result (default: latest)."""
     results = load_json(WEEKLY_RESULTS_FILE)
