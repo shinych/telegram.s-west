@@ -226,6 +226,32 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_text(text)
 
 
+async def cmd_view_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /view_all — all suggestions sorted by daily poll votes."""
+    suggestions = storage.get_all_suggestions()
+    if not suggestions:
+        await update.effective_message.reply_text("😶 Ещё нет предложений.")
+        return
+
+    scores = storage.get_all_daily_scores()
+    entries = []
+    for s in suggestions:
+        votes = scores.get(s["id"], 0)
+        entries.append((s["name"], votes, s["used_in_daily"]))
+    entries.sort(key=lambda x: -x[1])
+
+    lines = ["📋 Все предложения (по голосам в ежедневных опросах):\n"]
+    for i, (name, votes, used) in enumerate(entries, 1):
+        status = f" — {votes} гол." if used else " (ещё не в опросе)"
+        lines.append(f"{i}. {name}{status}")
+
+    text = "\n".join(lines)
+    # Telegram message limit is 4096 chars
+    if len(text) > 4096:
+        text = text[:4093] + "..."
+    await update.effective_message.reply_text(text)
+
+
 async def cmd_forcedaily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /forcedaily — admin only, trigger daily poll now."""
     if not is_admin(update.effective_user.id):
@@ -350,7 +376,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = [
         "📌 Команды:\n",
         "✏️ /suggest — предложить название (кнопка или /suggest <название>)",
-        "📊 /results — текущий рейтинг недели",
+        "📊 /results — рейтинг недели и итоги прошлых",
+        "📋 /view_all — все предложения по голосам",
         "ℹ️ /about — как всё устроено",
         "❓ /help — этот список",
     ]
@@ -480,6 +507,7 @@ def main():
     app.add_handler(CommandHandler("suggestions", cmd_suggestions))
     app.add_handler(CommandHandler("delete", cmd_delete))
     app.add_handler(CommandHandler("results", cmd_results))
+    app.add_handler(CommandHandler("view_all", cmd_view_all))
     app.add_handler(CommandHandler("forcedaily", cmd_forcedaily))
     app.add_handler(CommandHandler("forceweekly", cmd_forceweekly))
     app.add_handler(CommandHandler("forceprompt", cmd_forceprompt))

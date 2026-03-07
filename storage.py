@@ -187,6 +187,23 @@ def get_daily_scores_since(since_dt: datetime) -> dict:
     return scores
 
 
+def get_all_daily_scores() -> dict:
+    """Aggregate votes per suggestion_id from ALL daily polls.
+
+    Returns {suggestion_id: total_votes}.
+    """
+    results = load_json(POLL_RESULTS_FILE)
+    scores: dict[str, int] = {}
+    for poll in results.values():
+        if poll["type"] != "daily":
+            continue
+        for opt in poll["options"]:
+            sid = opt.get("suggestion_id")
+            if sid:
+                scores[sid] = scores.get(sid, 0) + opt.get("voter_count", 0)
+    return scores
+
+
 def get_open_polls() -> dict:
     """Return {telegram_poll_id: poll_record} for all non-closed polls."""
     results = load_json(POLL_RESULTS_FILE)
