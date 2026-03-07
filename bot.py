@@ -46,6 +46,19 @@ with open("assets/daily_prompts.txt", "r", encoding="utf-8") as _f:
 # ConversationHandler states
 AWAITING_BAND_NAME = 0
 
+# What's new text (one-time announcement)
+WHATS_NEW = (
+    "📰 Что нового (а то вы не спрашивали)\n\n"
+    "Голоса больше не теряются в пустоту. Раньше при перезапуске бота "
+    "открытые опросы тихо умирали, унося с собой ваши бесценные мнения. "
+    "Теперь мы их закрываем как положено — с уважением и подсчётом.\n\n"
+    "📊 /results теперь показывает не только текущую неделю, "
+    "но и прошлые чемпионаты. Чтобы вы могли оценить масштаб трагедии.\n\n"
+    "📋 /view_all — новая команда. Все предложения за всё время, "
+    "отсортированные по голосам. Летопись вашего коллективного безумия.\n\n"
+    "Пользуйтесь. Или нет. Боту всё равно."
+)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -385,6 +398,14 @@ async def cmd_reset_votes(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔄 Все голосования сброшены. Предложения снова доступны для опросов.")
 
 
+async def cmd_whatsnew(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /whatsnew — admin only, preview the what's new text."""
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("🔒 Эта команда только для админов.")
+        return
+    await update.effective_message.reply_text(WHATS_NEW)
+
+
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help."""
     lines = [
@@ -405,7 +426,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📢 /forceprompt — отправить промпт дня\n"
             "👥 /subscribers — список подписчиков\n"
             "🔒 /closepolls — закрыть все открытые опросы\n"
-            "🔄 /resetvotes — сбросить все голосования"
+            "🔄 /resetvotes — сбросить все голосования\n"
+            "📰 /whatsnew — что нового в боте"
         )
     await update.effective_message.reply_text("\n".join(lines))
 
@@ -528,6 +550,7 @@ def main():
     app.add_handler(CommandHandler("subscribers", cmd_subscribers))
     app.add_handler(CommandHandler("resetvotes", cmd_reset_votes))
     app.add_handler(CommandHandler("closepolls", cmd_close_polls))
+    app.add_handler(CommandHandler("whatsnew", cmd_whatsnew))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("about", cmd_about))
     app.add_handler(CommandHandler("start", cmd_about))
@@ -543,6 +566,33 @@ def main():
 
     # Start scheduler
     SCHEDULER = create_scheduler(app.bot, CONFIG, PROMPT_LINES)
+
+    # One-shot: send "what's new" tomorrow before the daily prompt
+    tz = pytz.timezone(CONFIG["timezone"])
+    tomorrow_prompt = datetime.now(tz).replace(
+        hour=CONFIG.get("daily_prompt_hour", 9),
+        minute=CONFIG.get("daily_prompt_minute", 0),
+        second=0, microsecond=0,
+    ) + timedelta(days=1)
+
+    from apscheduler.triggers.date import DateTrigger
+
+    async def send_whats_new(bot, config):
+        await bot.send_message(
+            chat_id=config["chat_id"],
+            text=WHATS_NEW,
+            **thread_kwargs(config),
+        )
+        logger.info("What's new отправлен.")
+
+    SCHEDULER.add_job(
+        send_whats_new,
+        trigger=DateTrigger(run_date=tomorrow_prompt - timedelta(minutes=1)),
+        args=[app.bot, CONFIG],
+        id="whats_new_once",
+        replace_existing=True,
+    )
+
     SCHEDULER.start()
     logger.info("Планировщик запущен.")
 
