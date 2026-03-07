@@ -71,7 +71,7 @@ async def _post_results(bot, config: dict):
 
 async def run_daily_poll(bot, config: dict):
     """Send daily poll(s) with unused suggestions."""
-    await close_open_polls(bot, config, poll_type="daily")
+    await close_open_polls(bot, config)
     await _post_results(bot, config)
 
     unused = storage.get_unused_suggestions()
@@ -121,7 +121,7 @@ async def run_daily_poll(bot, config: dict):
 
 async def run_weekly_poll(bot, config: dict, scheduler: AsyncIOScheduler):
     """Send weekly championship poll with top 10 names from the past week."""
-    await close_open_polls(bot, config, poll_type="daily")
+    await close_open_polls(bot, config)
     await _post_results(bot, config)
 
     tz = pytz.timezone(config["timezone"])
@@ -207,6 +207,9 @@ async def run_author_reveal(bot, config: dict):
     if not weekly or weekly.get("revealed"):
         return
 
+    # Close the weekly poll to capture final anonymous vote counts
+    await close_open_polls(bot, config, poll_type="weekly")
+
     # Re-read poll results to get final vote counts
     poll = storage.get_poll(weekly["poll_id"])
     final_counts = {}
@@ -214,14 +217,13 @@ async def run_author_reveal(bot, config: dict):
         for opt in poll["options"]:
             final_counts[opt["suggestion_id"]] = opt.get("voter_count", 0)
 
-    lines = ["🎉 Результаты еженедельного чемпионата:\n"]
-    medals = ["🥇", "🥈", "🥉", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
+    lines = ["🎉 Результаты еженедельного чемпионата:"]
 
-    for i, entry in enumerate(weekly["top"]):
+    medals = ["🥇", "🥈", "🥉", "🏅"]
+    for i, entry in enumerate(weekly["top"][:4]):
         votes = final_counts.get(entry["suggestion_id"], entry["votes"])
-        medal = medals[i] if i < len(medals) else f"{i+1}."
         lines.append(
-            f"{medal} {entry['name']} — {votes} гол. "
+            f"{medals[i]} {entry['name']} — {votes} гол. "
             f"(автор: {entry['author_name']})"
         )
 

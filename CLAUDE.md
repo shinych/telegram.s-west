@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Telegram bot for band name voting. Users suggest names via `/suggest`, the bot runs daily polls with those names, then a weekly championship with the top 5. Authors are revealed 48 hours after the weekly poll.
+Telegram bot for band name voting. Users suggest names via `/suggest`, the bot runs daily polls with those names, then a weekly championship with the top 10. Authors are revealed 48 hours after the weekly poll.
 
 All UI text is in **Russian**.
 

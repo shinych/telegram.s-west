@@ -21,6 +21,7 @@ from telegram.ext import (
 
 import storage
 from scheduler import (
+    close_open_polls,
     create_scheduler,
     run_daily_poll,
     run_daily_prompt,
@@ -144,7 +145,6 @@ def format_results(config: dict) -> str | None:
     """
     tz = pytz.timezone(config["timezone"])
     weekly_results = storage.get_all_weekly_results()
-    medals = ["🥇", "🥈", "🥉"]
 
     # --- Current week section ---
     if weekly_results:
@@ -171,13 +171,14 @@ def format_results(config: dict) -> str | None:
                 ranked.append((suggestion["name"], votes))
         ranked.sort(key=lambda x: -x[1])
         if ranked:
-            lines = [f"📊 Текущая неделя ({date_from} — {date_to}):\n"]
+            lines = [f"📊 Очередная неделя 😩 ({date_from} — {date_to}):"]
             for i, (name, votes) in enumerate(ranked, 1):
                 lines.append(f"{i}. {name} — {votes} гол.")
             sections.append("\n".join(lines))
 
     # --- Past weekly championships ---
-    for weekly in weekly_results:
+    total_weeks = len(weekly_results)
+    for week_idx, weekly in enumerate(weekly_results):
         poll = storage.get_poll(weekly["poll_id"])
         final_counts = {}
         if poll:
@@ -196,17 +197,18 @@ def format_results(config: dict) -> str | None:
         ranked_top = [
             e for e in ranked_top
             if final_counts.get(e["suggestion_id"], e["votes"]) > 0
-        ]
+        ][:4]
         if not ranked_top:
             continue
-        lines = [f"🏆 Неделя {week_start} — {week_end}:\n"]
+        week_num = total_weeks - week_idx
+        lines = [f"{week_num}. неделя 🤮 ({week_start} — {week_end}):"]
+        medals = ["🥇", "🥈", "🥉", "🏅"]
         for i, entry in enumerate(ranked_top):
             votes = final_counts.get(entry["suggestion_id"], entry["votes"])
-            medal = medals[i] if i < len(medals) else f"{i+1}."
-            name = entry["name"]
+            line = f"{medals[i]} {entry['name']} — {votes} гол."
             if weekly.get("revealed"):
-                name += f" (автор: {entry['author_name']})"
-            lines.append(f"{medal} {name} — {votes} гол.")
+                line += f" (автор: {entry['author_name']})"
+            lines.append(line)
         sections.append("\n".join(lines))
 
     if not sections:
@@ -489,6 +491,13 @@ def main():
     app.add_handler(CommandHandler("start", cmd_about))
     app.add_handler(PollAnswerHandler(on_poll_answer))
     app.add_handler(PollHandler(on_poll_update))
+
+    # Close any polls left open from a previous run (e.g. after restart)
+    async def post_init(application):
+        await close_open_polls(application.bot, CONFIG)
+        logger.info("Открытые опросы закрыты при старте.")
+
+    app.post_init = post_init
 
     # Start scheduler
     SCHEDULER = create_scheduler(app.bot, CONFIG, PROMPT_LINES)
