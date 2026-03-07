@@ -233,17 +233,31 @@ async def cmd_view_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.reply_text("😶 Ещё нет предложений.")
         return
 
+    # Collect suggestion IDs in currently open polls
+    open_polls = storage.get_open_polls()
+    open_sids = set()
+    for poll in open_polls.values():
+        for opt in poll["options"]:
+            sid = opt.get("suggestion_id")
+            if sid:
+                open_sids.add(sid)
+
     scores = storage.get_all_daily_scores()
     entries = []
     for s in suggestions:
+        if not s["used_in_daily"] or s["id"] in open_sids:
+            continue
         votes = scores.get(s["id"], 0)
-        entries.append((s["name"], votes, s["used_in_daily"]))
+        entries.append((s["name"], votes))
     entries.sort(key=lambda x: -x[1])
 
+    if not entries:
+        await update.effective_message.reply_text("😶 Ещё нет завершённых голосований.")
+        return
+
     lines = ["📋 Все предложения (по голосам в ежедневных опросах):\n"]
-    for i, (name, votes, used) in enumerate(entries, 1):
-        status = f" — {votes} гол." if used else " (ещё не в опросе)"
-        lines.append(f"{i}. {name}{status}")
+    for i, (name, votes) in enumerate(entries, 1):
+        lines.append(f"{i}. {name} — {votes} гол.")
 
     text = "\n".join(lines)
     # Telegram message limit is 4096 chars
