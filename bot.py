@@ -578,12 +578,12 @@ def main():
     from apscheduler.triggers.date import DateTrigger
 
     async def send_whats_new(bot, config):
-        await bot.send_message(
-            chat_id=config["chat_id"],
-            text=WHATS_NEW,
-            **thread_kwargs(config),
-        )
-        logger.info("What's new отправлен.")
+        for sub in storage.get_all_subscribers():
+            try:
+                await bot.send_message(chat_id=sub["user_id"], text=WHATS_NEW)
+            except Exception:
+                logger.exception("Ошибка отправки what's new подписчику %d", sub["user_id"])
+        logger.info("What's new отправлен подписчикам.")
 
     SCHEDULER.add_job(
         send_whats_new,
