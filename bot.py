@@ -107,8 +107,15 @@ async def cmd_suggest(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔁 Название \"{name}\" уже было предложено.")
     else:
         thanks = random.choice(THANKS_LINES)
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "✏️ Предложить ещё одно название",
+                url=f"https://t.me/{CONFIG['bot_username']}?start=suggest",
+            )
+        ]])
         await update.effective_message.reply_text(
-            f"🤘 Принято: \"{name}\"\n\n{thanks}")
+            f"🤘 Принято: \"{name}\"\n\n{thanks}",
+            reply_markup=keyboard)
 
 
 async def cmd_suggestions(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -333,8 +340,15 @@ async def receive_band_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return AWAITING_BAND_NAME
 
     thanks = random.choice(THANKS_LINES)
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "✏️ Предложить ещё одно название",
+            url=f"https://t.me/{CONFIG['bot_username']}?start=suggest",
+        )
+    ]])
     await update.effective_message.reply_text(
-        f"🤘 Принято: \"{name}\"\n\n{thanks}")
+        f"🤘 Принято: \"{name}\"\n\n{thanks}",
+        reply_markup=keyboard)
     return ConversationHandler.END
 
 
