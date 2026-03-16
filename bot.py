@@ -279,11 +279,19 @@ async def cmd_view_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, (name, votes) in enumerate(entries, 1):
         lines.append(f"{i}. {name} — {votes} гол.")
 
-    text = "\n".join(lines)
-    # Telegram message limit is 4096 chars
-    if len(text) > 4096:
-        text = text[:4093] + "..."
-    await update.effective_message.reply_text(text)
+    # Split into multiple messages to respect Telegram's 4096-char limit
+    chunks = []
+    current_chunk = lines[0]  # header
+    for line in lines[1:]:
+        if len(current_chunk) + 1 + len(line) > 4096:
+            chunks.append(current_chunk)
+            current_chunk = line
+        else:
+            current_chunk += "\n" + line
+    chunks.append(current_chunk)
+
+    for chunk in chunks:
+        await update.effective_message.reply_text(chunk)
 
 
 async def cmd_forcedaily(update: Update, context: ContextTypes.DEFAULT_TYPE):
